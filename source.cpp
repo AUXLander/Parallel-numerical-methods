@@ -1,3 +1,6 @@
+#include <random>
+#include <chrono>
+
 #include "matrix.h"
 #include "math.h"
 
@@ -12,18 +15,23 @@ void LU_decomposition(double* A, double* L, double* U, int n)
 
 	for (int i, j = 0; j < n; ++j)
 	{
-		for (i = 0; i <= j; ++i)
+		#pragma omp parallel
 		{
-			const auto sum = summary<double, int>(0, i, [&](int k) { return l(i, k) * u(k, j); });
+			#pragma omp for
+			for (i = 0; i <= j; ++i)
+			{
+				const auto sum = summary<double, int>(0, i, [&](int k) { return l(i, k) * u(k, j); });
 
-			u(i, j) = a(i, j) - sum;
-		}
+				u(i, j) = a(i, j) - sum;
+			}
 
-		for (i = 1; i < n; ++i)
-		{
-			const auto sum = summary<double, int>(0, j, [&](int k) { return l(i, k) * u(k, j); });
+			#pragma omp for
+			for (i = 1; i < n; ++i)
+			{
+				const auto sum = summary<double, int>(0, j, [&](int k) { return l(i, k) * u(k, j); });
 
-			l(i, j) = (a(i, j) - sum) / u(j, j);
+				l(i, j) = (a(i, j) - sum) / u(j, j);
+			}
 		}
 	}
 }
@@ -35,24 +43,39 @@ void LU_decomposition(matrix_adaptor<double>& A, matrix_adaptor<double>& L, matr
 
 int main()
 {
-	matrix_adaptor<double> A(2, 2);
-	matrix_adaptor<double> L(2, 2);
-	matrix_adaptor<double> U(2, 2);
+	constexpr static size_t N = 1000;
 
-	A[0][0] = 1.0; A[0][1] = 3.0;
-	A[1][0] = 2.0; A[1][1] = 4.0;
+	matrix_adaptor<double> A(N, N);
+	matrix_adaptor<double> L(N, N);
+	matrix_adaptor<double> U(N, N);
 
-	LU_decomposition(A, L, U, 2);
+	srand(0); // no random
 
-	A.print(std::cout);
+	for (size_t i = 0; i < N; ++i)
+	{
+		for (size_t j = 0; j < N; ++j)
+		{
+			A[i][j] = (double)(rand() % 100) + 1.0;
+		}
+	}
+
+	auto t1 = std::chrono::high_resolution_clock::now();
+	LU_decomposition(A, L, U, N);
+	auto t2 = std::chrono::high_resolution_clock::now();
+
+	std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+
+	std::cout << fp_ms.count() << " ms\n";
+
+	//A.print(std::cout);
 
 	std::cout << '\n' << '\n';
 
-	L.print(std::cout);
+	//L.print(std::cout);
 
 	std::cout << '\n' << '\n';
 
-	U.print(std::cout);
+	//U.print(std::cout);
 
 	return 0;
 }
