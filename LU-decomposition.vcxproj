@@ -141,6 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="math.h" />
     <ClInclude Include="matrix.h" />
   </ItemGroup>
   <ItemGroup>
