@@ -4,8 +4,8 @@
 #include "matrix.h"
 #include "block_matrix.h"
 
-constexpr static size_t N = 6;
-constexpr static size_t block_size = 3;
+constexpr static size_t N = 3000;
+constexpr static size_t block_size = 600;
 constexpr static size_t blocks_count = N / block_size;
 
 void LU_Decomposition(double* A, double* L, double* U, int n)

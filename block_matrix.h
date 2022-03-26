@@ -93,39 +93,43 @@ struct block_matrix
 		for (int k = 0; k < blocks_count; ++k)
 		{
 			A(k, k).LU_decomposition(L(k, k), U(k, k), block_size);
-
-			for (int l = k; l < blocks_count - 1; ++l)
+			
+			for (intptr_t l = k; l < blocks_count - 1; ++l)
 			{
 				A(k, l + 1).krum(L(k, k), U(k, l + 1), block_size);
+			}
+			
+			#pragma omp parallel for
+			for (intptr_t l = k; l < blocks_count - 1; ++l)
+			{
 				A(l + 1, k).kdlm(L(l + 1, k), U(k, k), block_size);
 			}
 
 			if (k < blocks_count - 1)
-			{
+			{				
 				for (size_t y = k + 1; y < blocks_count; ++y)
 				{
+					const auto& ml = L(y, k);
+
 					for (size_t x = k + 1; x < blocks_count; ++x)
 					{
-						auto& ml = L(y, k);
-						auto& mu = U(k, x);
-
+						const auto& mu = U(k, x);
 						auto& ma = A(y, x);
-
-						for (size_t i = 0; i < A.block_size_y; ++i)
+						
+					    #pragma omp for 
+						for (intptr_t i = 0; i < A.block_size_y; ++i)
 						{
 							for (size_t j = 0; j < A.block_size_x; ++j)
 							{
 								T lu = 0;
 
+								//#pragma omp parallel for reduction(+:lu)
 								for (size_t r = 0; r < L.block_size_x; ++r)
 								{
-									auto& __ml = ml(i, r);
-									auto& __mu = mu(r, j);
-
-									lu += __ml * __mu;
+									lu += ml(i, r) * mu(r, j);
 								}
 
-								ma(i,j) -= lu;
+								ma(i, j) -= lu;
 							}
 						}
 					}
@@ -149,7 +153,7 @@ struct block_matrix
 			{
 				for (size_t k = 0; k < count_y * block_size_x * 8 + count_y * block_size_x * 2 - 2 + (count_y - 1) * 3; ++k)
 				{
-					fd << '-';
+					//fd << '-';
 				}
 
 				fd << '\n';
@@ -161,7 +165,8 @@ struct block_matrix
 				{
 					if (j > 0)
 					{
-						fd << "|  ";
+						//fd << "|  ";
+						fd << "  ";
 					}
 
 					(blocks.get())[j + count_y * i].print(fd, l);

@@ -216,12 +216,12 @@ public:
 		return temp;
 	}
 
-	void krum(matrix_adaptor<T>& l, matrix_adaptor<T>& u, int n)
+	inline void krum(matrix_adaptor<T>& l, matrix_adaptor<T>& u, size_t n)
 	{
 		const auto& a = *this;
 
-		for (int z = 0; z < n; ++z)
-			for (int i = 0; i < n; ++i)
+		for (size_t z = 0; z < n; ++z)
+			for (size_t i = 0; i < n; ++i)
 			{
 				const auto sum = summary<double, int>(0, i, [&](int k) { return l(i, k) * u(k, z); });
 
@@ -229,12 +229,12 @@ public:
 			}
 	}
 
-	void kdlm(matrix_adaptor<T>& l, matrix_adaptor<T>& u, int n)
+	inline void kdlm(matrix_adaptor<T>& l, matrix_adaptor<T>& u, size_t n)
 	{
 		const auto& a = *this;
 
-		for (int z = 0; z < n; ++z)
-			for (int j = 0; j < n; ++j)
+		for (size_t z = 0; z < n; ++z)
+			for (size_t j = 0; j < n; ++j)
 			{
 				const auto sum = summary<double, int>(0, j, [&](int k) { return l(z, k) * u(k, j); });
 
@@ -253,16 +253,18 @@ public:
 		l(0, 0) = 1.0;
 		u(0, 0) = a(0, 0);
 
-		for (int i, j = 0; j < n; ++j)
+		for (intptr_t j = 0; j < n; ++j)
 		{
-			for (i = 0; i <= j; ++i)
+			#pragma omp parallel for
+			for (intptr_t i = 0; i <= j; ++i)
 			{
 				const auto sum = summary<double, int>(0, i, [&](int k) { return l(i, k) * u(k, j); });
 
 				u(i, j) = a(i, j) - sum;
 			}
 
-			for (i = 1; i < n; ++i)
+			#pragma omp parallel for
+			for (intptr_t i = 1; i < n; ++i)
 			{
 				const auto sum = summary<double, int>(0, j, [&](int k) { return l(i, k) * u(k, j); });
 
@@ -317,11 +319,6 @@ public:
 
 		return std::sqrt(s);
 	}
-
-	/*T* data() const
-	{
-		return matrix.get();
-	}*/
 
 	operator T* ()
 	{
