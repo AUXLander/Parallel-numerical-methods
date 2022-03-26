@@ -349,3 +349,6 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 LU-razlozhenie_na_93.cpp
+*.vtuneproj
+VTune Profiler Results/*
+

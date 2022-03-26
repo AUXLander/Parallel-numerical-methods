@@ -57,7 +57,7 @@ public:
 	matrix_adaptor(T *ptr, size_t size_x, size_t size_y) :
 		matrix(ptr, [](T*) {}),
 		size_x(size_x), size_y(size_y),
-		length(size_x* size_y)
+		length(size_x * size_y)
 	{;}
 	
 	matrix_adaptor(size_t size_x, size_t size_y) : 
@@ -90,7 +90,7 @@ public:
 		return row_adaptor<T>(memory, index_x, size_x, size_y);
 	}
 
-	T& operator()(size_t index_y, size_t index_x)
+	inline T& operator()(size_t index_y, size_t index_x)
 	{
 		auto memory = matrix.get();
 
@@ -100,7 +100,7 @@ public:
 		return memory[index_y * size_x + index_x];
 	}
 
-	const T& operator()(size_t index_y, size_t index_x) const
+	inline const T& operator()(size_t index_y, size_t index_x) const
 	{
 		auto memory = matrix.get();
 
@@ -203,16 +203,41 @@ public:
 		}
 	}
 
+	void fill_random()
+	{
+		#pragma omp parallel for
+		for (intptr_t index = 0; index < length; ++index)
+		{
+			linear_access(index) = (double)(rand() % 100) + 1.0;
+		}
+	}
+
 	void print(std::ostream& fd)
 	{
 		auto memory = matrix.get();
 		auto stored_flags = fd.flags();
 
-		fd << std::fixed << std::setprecision(3);
+		fd << std::fixed << std::setprecision(3) ;
 
 		for (size_t index = 0; index < length; ++index)
 		{
-			fd << memory[index] << (index % size_x == size_x - 1 ? '\n' : ' ');
+			fd << std::setw(6) << memory[index] << (index % size_x == size_x - 1 ? "\n" : "   ");
+		}
+
+		fd.setf(stored_flags);
+	}
+
+	void print(std::ostream& fd, size_t i)
+	{
+		auto memory = matrix.get();
+		auto stored_flags = fd.flags();
+		auto offset = size_x * i;
+
+		fd << std::fixed << std::setprecision(3);
+
+		for (size_t index = 0; index < size_x; ++index)
+		{
+			fd << std::setw(8) << memory[offset + index] << "  ";
 		}
 
 		fd.setf(stored_flags);

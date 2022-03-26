@@ -2,6 +2,7 @@
 #include <chrono>
 
 #include "matrix.h"
+#include "block_matrix.h"
 
 void LU_decomposition(double* A, double* L, double* U, int n)
 {
@@ -10,50 +11,89 @@ void LU_decomposition(double* A, double* L, double* U, int n)
 	a.LU_decomposition(L, U, n);
 }
 
-void LU_decomposition(matrix_adaptor<double>& A, matrix_adaptor<double>& L, matrix_adaptor<double>& U, int n)
-{
-	LU_decomposition(A.data(), L.data(), U.data(), n);
-}
-
 int main()
 {
-	constexpr static size_t N = 3000;
-
-	matrix A(N, N);
-	matrix L(N, N);
-	matrix U(N, N);
+	constexpr static size_t N = 9;
+	constexpr static size_t block_size = 3;
+	constexpr static size_t blocks_count = N / block_size;
 
 	srand(0); // no random
 
-	for (size_t index = 0; index < N*N; ++index)
+	block_matrix<double> A(block_size, block_size, N, N);
+	block_matrix<double> L(block_size, block_size, N, N);
+	block_matrix<double> U(block_size, block_size, N, N);
+
+	#pragma omp parallel 
 	{
-		A.linear_access(index) = (double)(rand() % 100) + 1.0;
+		for (int i = 0; i < blocks_count; ++i)
+		{
+			#pragma omp for 
+			for (int j = 0; j < blocks_count; ++j)
+			{
+				A(i, j).fill_random();
+			}
+		}
 	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
-	LU_decomposition(A, L, U, N);
+
+	#pragma omp parallel 
+	{
+		for (int i = 0; i < blocks_count; ++i)
+		{
+			#pragma omp for 
+			for (int j = 0; j < blocks_count; ++j)
+			{
+				A(i, j).LU_decomposition(L(i, j).data(), U(i, j).data(), block_size);
+			}
+		}
+	}
+
 	auto t2 = std::chrono::high_resolution_clock::now();
+
+
+	// printing
+	if constexpr (true)
+	{
+		std::cout << "print A: \n";
+
+		A.print(std::cout);
+
+		std::cout << '\n' << '\n';
+
+		std::cout << "print L: \n";
+		L.print(std::cout);
+
+		std::cout << '\n' << '\n';
+
+		std::cout << "print U: \n";
+		U.print(std::cout);
+	}
 
 	std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
 
+	std::cout << '\n' << '\n';
+
 	std::cout << fp_ms.count() << " ms\n";
 
-	//A.print(std::cout);
-
 	std::cout << '\n' << '\n';
 
-	//L.print(std::cout);
+	////A.print(std::cout);
 
-	std::cout << '\n' << '\n';
+	//std::cout << '\n' << '\n';
 
-	//U.print(std::cout);
-	
-	return 0;
+	////L.print(std::cout);
 
-	auto t_norm = (L * U - A).norm();
-	auto a_norm = A.norm();
+	//std::cout << '\n' << '\n';
 
-	std::cout << t_norm / a_norm;
+	////U.print(std::cout);
+	//
+	//return 0;
+
+	//auto t_norm = (L * U - A).norm();
+	//auto a_norm = A.norm();
+
+	//std::cout << t_norm / a_norm;
 
 
 	return 0;

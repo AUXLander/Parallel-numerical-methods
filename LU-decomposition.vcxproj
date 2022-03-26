@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="block_matrix.h" />
     <ClInclude Include="math.h" />
     <ClInclude Include="matrix.h" />
   </ItemGroup>
