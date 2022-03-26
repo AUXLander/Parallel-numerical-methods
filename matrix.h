@@ -180,8 +180,6 @@ public:
 		assert(size_x == other.size_x);
 		assert(size_y == other.size_y);
 
-		//matrix_adaptor<T> temp(size_x, size_y);
-
 		auto& a = *this;
 		auto& b = other;
 		auto& c = *this;
@@ -199,8 +197,7 @@ public:
 
 	matrix_adaptor<T> operator*(const matrix_adaptor<T>& other) const
 	{
-		//assert(size_x == other.size_x);
-		//assert(size_y == other.size_y);
+		assert(other.size_x == size_y);
 
 		matrix_adaptor<T> temp(other.size_x, size_y);
 
@@ -219,12 +216,9 @@ public:
 		return temp;
 	}
 
-	void krum(int j, double* L, double* U, int n)
+	void krum(matrix_adaptor<T>& l, matrix_adaptor<T>& u, int n)
 	{
 		const auto& a = *this;
-
-		matrix_adaptor<T> l(L, n, n);
-		matrix_adaptor<T> u(U, n, n);
 
 		for (int z = 0; z < n; ++z)
 			for (int i = 0; i < n; ++i)
@@ -235,19 +229,16 @@ public:
 			}
 	}
 
-	void kdlm(int i, double* L, double* U, int n)
+	void kdlm(matrix_adaptor<T>& l, matrix_adaptor<T>& u, int n)
 	{
 		const auto& a = *this;
 
-		matrix_adaptor<T> l(L, n, n);
-		matrix_adaptor<T> u(U, n, n);
-
-		for (int z = 0; z + i < n; ++z)
+		for (int z = 0; z < n; ++z)
 			for (int j = 0; j < n; ++j)
 			{
-				const auto sum = summary<double, int>(0, j, [&](int k) { return l(i + z, k) * u(k, j); });
+				const auto sum = summary<double, int>(0, j, [&](int k) { return l(z, k) * u(k, j); });
 
-				l(i + z, j) = (a(i + z, j) - sum) / u(j, j);
+				l(z, j) = (a(z, j) - sum) / u(j, j);
 			}
 	}
 
@@ -327,7 +318,12 @@ public:
 		return std::sqrt(s);
 	}
 
-	T* data() const
+	/*T* data() const
+	{
+		return matrix.get();
+	}*/
+
+	operator T* ()
 	{
 		return matrix.get();
 	}

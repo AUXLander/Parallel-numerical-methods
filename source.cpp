@@ -4,19 +4,21 @@
 #include "matrix.h"
 #include "block_matrix.h"
 
+constexpr static size_t N = 3000;
+constexpr static size_t block_size = 100;
+constexpr static size_t blocks_count = N / block_size;
+
 void LU_Decomposition(double* A, double* L, double* U, int n)
 {
-	matrix a(A, n, n);
+	block_matrix<double> bmA(A, block_size, block_size, N, N);
+	block_matrix<double> bmL(L, block_size, block_size, N, N);
+	block_matrix<double> bmU(U, block_size, block_size, N, N);
 
-	a.LU_decomposition(L, U, n);
+	bmA.LU_decomposition(L, U, block_size, N);
 }
 
 int main()
 {
-	constexpr static size_t N = 2000;
-	constexpr static size_t block_size = 125;
-	constexpr static size_t blocks_count = N / block_size;
-
 	srand(0); // no random
 
 	block_matrix<double> A(block_size, block_size, N, N);
@@ -35,18 +37,19 @@ int main()
 		}
 	}
 
-	//std::cout << "print A: \n";
-
-	//A.print(std::cout);
+	if constexpr (N <= 10)
+	{
+		std::cout << "print A: \n";
+		A.print(std::cout);
+	}
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 
-	A.LU_decomposition(L.data(), U.data(), block_size, N);
+	LU_Decomposition(A, L, U, N);
 
 	auto t2 = std::chrono::high_resolution_clock::now();
 
-	// printing
-	if constexpr (false)
+	if constexpr ( N <= 10 )
 	{
 		std::cout << '\n' << '\n';
 
@@ -66,24 +69,6 @@ int main()
 	std::cout << fp_ms.count() << " ms\n";
 
 	std::cout << '\n' << '\n';
-
-	////A.print(std::cout);
-
-	//std::cout << '\n' << '\n';
-
-	////L.print(std::cout);
-
-	//std::cout << '\n' << '\n';
-
-	////U.print(std::cout);
-	//
-	//return 0;
-
-	//auto t_norm = (L * U - A).norm();
-	//auto a_norm = A.norm();
-
-	//std::cout << t_norm / a_norm;
-
 
 	return 0;
 }

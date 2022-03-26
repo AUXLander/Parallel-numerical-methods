@@ -76,7 +76,7 @@ struct block_matrix
 		return (blocks.get())[j + count_y * i];
 	}
 
-	inline T* data()
+	operator T* ()
 	{
 		return memory.get();
 	}
@@ -92,16 +92,12 @@ struct block_matrix
 		// k is diagonal index
 		for (int k = 0; k < blocks_count; ++k)
 		{
-			A(k, k).LU_decomposition(L(k, k).data(), U(k, k).data(), block_size);
+			A(k, k).LU_decomposition(L(k, k), U(k, k), block_size);
 
-			for (int j = k; j < blocks_count - 1; ++j)
+			for (int l = k; l < blocks_count - 1; ++l)
 			{
-				A(k, j + 1).krum(k, L(k, k).data(), U(k, j + 1).data(), block_size);
-			}
-
-			for (int i = k; i < blocks_count - 1; ++i)
-			{
-				A(i + 1, k).kdlm(0, L(i + 1, k).data(), U(k, k).data(), block_size);
+				A(k, l + 1).krum(L(k, k), U(k, l + 1), block_size);
+				A(l + 1, k).kdlm(L(l + 1, k), U(k, k), block_size);
 			}
 
 			if (k < blocks_count - 1)
