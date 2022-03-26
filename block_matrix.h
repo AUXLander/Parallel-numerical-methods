@@ -102,67 +102,30 @@ struct block_matrix
 
 			if (k < blocks_count - 1)
 			{
-				size_t t = block_size * (blocks_count - k - 1);
-
-				matrix_adaptor<double> lr(block_size, t);
-				matrix_adaptor<double> ur(t, block_size);
-				matrix_adaptor<double> ar(t, t);
-
-				for (int y = k + 1, ylr = 0; y < blocks_count; ++y, ylr += L.block_size_x)
+				for (size_t y = k + 1; y < blocks_count; ++y)
 				{
-					auto& block = L(y, k);
-
-					for (int i = 0; i < L.block_size_x; ++i)
+					for (size_t x = k + 1; x < blocks_count; ++x)
 					{
-						for (int j = 0; j < L.block_size_y; ++j)
+						auto& ml = L(y, k);
+						auto& mu = U(k, x);
+
+						auto& ma = A(y, x);
+
+						for (size_t i = 0; i < A.block_size_y; ++i)
 						{
-							lr(i + ylr, j) = block(i, j);
-						}
-					}
-				}
-
-				for (int x = k + 1, xur = 0; x < blocks_count; ++x, xur += L.block_size_y)
-				{
-					auto& block = U(k, x);
-
-					for (int i = 0; i < L.block_size_x; ++i)
-					{
-						for (int j = 0; j < L.block_size_y; ++j)
-						{
-							ur(i, j + xur) = block(i, j);
-						}
-					}
-				}
-
-				for (int x = k + 1, xar = 0; x < blocks_count; ++x, xar += A.block_size_y)
-				{
-					for (int y = k + 1, yar = 0; y < blocks_count; ++y, yar += A.block_size_x)
-					{
-						auto& block = A(y, x);
-
-						for (int i = 0; i < A.block_size_x; ++i)
-						{
-							for (int j = 0; j < A.block_size_y; ++j)
+							for (size_t j = 0; j < A.block_size_x; ++j)
 							{
-								ar(i + yar, j + xar) = block(i, j);
-							}
-						}
-					}
-				}
+								T lu = 0;
 
-				ar -= lr * ur;
+								for (size_t r = 0; r < L.block_size_x; ++r)
+								{
+									auto& __ml = ml(i, r);
+									auto& __mu = mu(r, j);
 
-				for (int x = k + 1, xar = 0; x < blocks_count; ++x, xar += A.block_size_y)
-				{
-					for (int y = k + 1, yar = 0; y < blocks_count; ++y, yar += A.block_size_x)
-					{
-						auto& block = A(y, x);
+									lu += __ml * __mu;
+								}
 
-						for (int i = 0; i < A.block_size_x; ++i)
-						{
-							for (int j = 0; j < A.block_size_y; ++j)
-							{
-								block(i, j) = ar(i + yar, j + xar);
+								ma(i,j) -= lu;
 							}
 						}
 					}
