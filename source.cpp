@@ -4,7 +4,7 @@
 #include "matrix.h"
 #include "block_matrix.h"
 
-void LU_decomposition(double* A, double* L, double* U, int n)
+void LU_Decomposition(double* A, double* L, double* U, int n)
 {
 	matrix a(A, n, n);
 
@@ -13,8 +13,8 @@ void LU_decomposition(double* A, double* L, double* U, int n)
 
 int main()
 {
-	constexpr static size_t N = 9;
-	constexpr static size_t block_size = 3;
+	constexpr static size_t N = 2000;
+	constexpr static size_t block_size = 125;
 	constexpr static size_t blocks_count = N / block_size;
 
 	srand(0); // no random
@@ -23,11 +23,11 @@ int main()
 	block_matrix<double> L(block_size, block_size, N, N);
 	block_matrix<double> U(block_size, block_size, N, N);
 
-	#pragma omp parallel 
+	//#pragma omp parallel 
 	{
 		for (int i = 0; i < blocks_count; ++i)
 		{
-			#pragma omp for 
+			//#pragma omp for 
 			for (int j = 0; j < blocks_count; ++j)
 			{
 				A(i, j).fill_random();
@@ -35,30 +35,19 @@ int main()
 		}
 	}
 
+	//std::cout << "print A: \n";
+
+	//A.print(std::cout);
+
 	auto t1 = std::chrono::high_resolution_clock::now();
 
-	#pragma omp parallel 
-	{
-		for (int i = 0; i < blocks_count; ++i)
-		{
-			#pragma omp for 
-			for (int j = 0; j < blocks_count; ++j)
-			{
-				A(i, j).LU_decomposition(L(i, j).data(), U(i, j).data(), block_size);
-			}
-		}
-	}
+	A.LU_decomposition(L.data(), U.data(), block_size, N);
 
 	auto t2 = std::chrono::high_resolution_clock::now();
 
-
 	// printing
-	if constexpr (true)
+	if constexpr (false)
 	{
-		std::cout << "print A: \n";
-
-		A.print(std::cout);
-
 		std::cout << '\n' << '\n';
 
 		std::cout << "print L: \n";
