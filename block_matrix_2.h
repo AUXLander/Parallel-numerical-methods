@@ -1,10 +1,10 @@
 #pragma once
+#include "math.h"
 #include <iostream>
 #include <memory>
 #include <functional>
 #include <iomanip>
 #include <assert.h>
-#include "math.h"
 
 template<class T>
 struct matrix
@@ -108,21 +108,20 @@ struct matrix
 	{
 		assert(other.size_x == size_y);
 
-		matrix<T> temp(other.size_x, size_y);
+		matrix<T> C(other.size_x, size_y);
 
 		const auto& a = *this;
 		const auto& b = other;
-		auto& c = temp;
 
-		for (size_t i = 0; i < other.size_x; ++i)
+		for (size_t i = 0; i < size_y; ++i)
 		{
 			for (size_t j = 0; j < size_y; ++j)
 			{
-				c.at(i, j) = summary<double, size_t>(0U, size_x, [&](size_t r) { return a.at(i, r) * b.at(r, j); });
+				C(i, j) = summary<T, size_t>(0U, size_x, [&](size_t r) { return a.at(i, r) * b.at(r, j); });
 			}
 		}
 
-		return temp;
+		return C;
 	}
 
 	matrix<T>& operator-=(const matrix<T>& other)
@@ -153,6 +152,27 @@ struct matrix
 		return (m);
 	}
 
+
+	bool operator==(const matrix<T>& other) const
+	{
+		assert(size_x == other.size_x);
+		assert(size_y == other.size_y);
+
+		for (size_t i = 0; i < size_y; ++i)
+		{
+			for (size_t j = 0; j < size_x; ++j)
+			{
+				if (std::abs(at(i, j) - other.at(i, j)) > 1e-10)
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+
 	void LU_decomposition(matrix<T>& L, matrix<T>& U)
 	{
 		assert(L.size_x == U.size_x);
@@ -170,11 +190,11 @@ struct matrix
 		{
 			for (size_t i = 0; i <= j; ++i)
 			{
-				const auto sum = summary<double, size_t>(0, i, [&](size_t k) { return L(i, k) * U(k, j); });
+				const auto sum = summary<T, size_t>(0, i, [&](size_t k) { return L(i, k) * U(k, j); });
 
 				auto sub = A(i, j) - sum;
 
-				if (i == j && sub == 0)
+				if (i == j && std::abs(sub) < 1e-10)
 				{
 					U(i, j) = 1.0;
 				}
@@ -184,14 +204,13 @@ struct matrix
 				}
 			}
 
+			auto _u = (T)1.0 / U(j, j);
+
 			for (size_t i = 1; i < size; ++i)
 			{
-				const auto sum = summary<double, size_t>(0, j, [&](size_t k) { return L(i, k) * U(k, j); });
+				const auto sum = summary<T, size_t>(0, j, [&](size_t k) { return L(i, k) * U(k, j); });
 
-				auto _u = U(j, j);
-				auto _a = A(i, j);
-
-				L(i, j) = (_a - sum) / _u;
+				L(i, j) = (A(i, j) - sum) * _u;
 			}
 		}
 	}
@@ -262,10 +281,34 @@ struct matrix
 				}
 			}
 
+			// A22 -= L21 * U12;
+
+			for (size_t shift_y = offset + size; shift_y < size_y; shift_y += size)
+			{
+				const auto ml = L.from(shift_y, offset, size, size);
+
+				for (size_t shift_x = offset + size; shift_x < size_x; shift_x += size)
+				{
+					const auto mu = U.from(offset, shift_x, size, size);
+					auto ma = from(shift_y, shift_x, size, size);
+
+					for (size_t i = 0; i < size; ++i)
+					{
+						for (size_t j = 0; j < size; ++j)
+						{
+							auto& cell = ma(i, j);
+
+							for (size_t r = 0; r < size; ++r)
+							{
+								cell -= ml(i, r) * mu(r, j);
+							}
+						}
+					}
+				}
+			}
+
 			rm_size -= size;
 			offset += size;
-
-			A22 -= L21 * U12;
 		}
 
 		auto A11 = from(offset, offset, size, size);
@@ -289,7 +332,7 @@ struct matrix
 		}
 	}
 
-	void print(std::ostream& fd)
+	void print(std::ostream& fd, bool skip_zeros = true)
 	{
 		auto stored_flags = fd.flags();
 
@@ -299,7 +342,14 @@ struct matrix
 		{
 			for (size_t j = 0; j < size_x; ++j)
 			{
-				fd << std::setw(8) << at(i, j) << "  ";
+				if (skip_zeros && std::abs(at(i, j)) < 1e-7)
+				{
+					fd << std::setw(8) << "        " << "  ";
+				}
+				else
+				{
+					fd << std::setw(8) << at(i, j) << "  ";
+				}
 			}
 
 			fd << '\n';
@@ -308,3 +358,64 @@ struct matrix
 		fd.setf(stored_flags);
 	}
 };
+
+using matrix_t = matrix<double>;
+
+void LU_Decomposition(double* A, double* L, double* U, int N)
+{
+	matrix_t bmA(N, N, nullptr, A);
+	matrix_t bmL(N, N, nullptr, L);
+	matrix_t bmU(N, N, nullptr, U);
+
+	bmA.lock = false;
+	bmL.lock = false;
+	bmU.lock = false;
+
+	for (size_t i = 0; i < N; ++i)
+	{
+		if (std::abs(bmA(i, i)) < 1e-10)
+		{
+			for (size_t j = 0; j < N; ++j)
+			{
+				std::swap(bmA(i, j), bmA((i + 1) % N, j));
+			}
+		}
+	}
+
+	matrix_t A_copy(bmA);
+
+	size_t blsize = std::min<size_t>(120U, N);
+
+	while (N % blsize)
+	{
+		--blsize;
+	}
+
+	bmA.LU_decomposition(bmL, bmU, blsize);
+
+	auto LU = bmL * bmU;
+
+	if (LU == A_copy)
+	{
+		std::cout << "\n\nprint: LU == A its ok\n";
+	}
+	else
+	{
+		// 1648742200 2231383348
+		std::cout << "\n\nprint: LU != A !!!!! NOT OK\n";
+
+		A_copy.print(std::cout);
+
+		std::cout << "\n\nprint: LU\n";
+
+		LU.print(std::cout);
+
+		std::cout << "\n\nprint: L\n";
+
+		bmL.print(std::cout);
+
+		std::cout << "\n\nprint: U\n";
+
+		bmU.print(std::cout);
+	}
+}

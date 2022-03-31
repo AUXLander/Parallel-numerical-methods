@@ -1,75 +1,71 @@
 #include <random>
 #include <chrono>
+#include <time.h>
+#include <thread>
 
 #include "block_matrix_2.h"
 
-void LU_Decomposition(double* A, double* L, double* U, int N)
-{
-	size_t block_size = 100;//  std::sqrtf(N);
-
-	matrix<double> bmA(N, N, nullptr, A);
-	matrix<double> bmL(N, N, nullptr, L);
-	matrix<double> bmU(N, N, nullptr, U);
-
-	bmA.lock = false;
-	bmL.lock = false;
-	bmU.lock = false;
-
-	bmA.LU_decomposition(bmL, bmU, block_size);
-}
 
 int main()
 {
-	srand(0);
-
-	constexpr size_t N = 1000;
-
-	matrix<double> A(N, N);
-	matrix<double> U(N, N);
-	matrix<double> L(N, N);
-
-	size_t idx = 0;
-
-	for (size_t i = 0; i < N; ++i)
+	while (true)
 	{
-		for (size_t j = 0; j < N; ++j)
+		unsigned int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+
+		//unsigned int seed = time(NULL);
+
+		//seed = 1648742200;
+
+		//srand(seed = 2231383348);
+		srand(seed);
+
+		constexpr size_t N = 20;
+
+		matrix_t A(N, N);
+		matrix_t U(N, N);
+		matrix_t L(N, N);
+
+		size_t idx = 0;
+
+		for (size_t i = 0; i < N; ++i)
 		{
-			A(i, j) = 1.0 + rand()%100;
+			for (size_t j = 0; j < N; ++j)
+			{
+				A(i, j) = 100.0 * ((double)rand() / (double)RAND_MAX);
 
-			++idx;
+				++idx;
+			}
 		}
-	}
 
-	if constexpr (N <= 10)
-	{
-		A.print(std::cout);
-	}
+		
 
-	auto t1 = std::chrono::high_resolution_clock::now();
+		if constexpr (N <= 10)
+		{
+			A.print(std::cout, false);
+		}
 
-	LU_Decomposition(A, L, U, N);
+		auto t1 = std::chrono::high_resolution_clock::now();
 
-	auto t2 = std::chrono::high_resolution_clock::now();
+		LU_Decomposition(A, L, U, N);
 
-	std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+		auto t2 = std::chrono::high_resolution_clock::now();
 
-	std::cout << "\n" << fp_ms.count() << " ms\n";
+		std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
 
-	if constexpr (N <= 10)
-	{
-		std::cout << "\n\nprint: L\n";
+		std::cout << "\n" << fp_ms.count() << " ms\n";
 
-		L.print(std::cout);
+		if constexpr (N <= 10)
+		{
+			std::cout << "\n\nprint: L\n";
 
-		std::cout << "\n\nprint: U\n";
+			L.print(std::cout);
 
-		U.print(std::cout);
+			std::cout << "\n\nprint: U\n";
 
-		auto LU = L * U;
+			U.print(std::cout);
+		}
 
-		std::cout << "\n\nprint: LU\n";
 
-		LU.print(std::cout);
 	}
 
 	return 0;
