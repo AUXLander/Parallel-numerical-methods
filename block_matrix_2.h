@@ -16,17 +16,25 @@ struct matrix
 
 	T* p_start;
 
+	bool lock{ true };
+
 	matrix(size_t size_x, size_t size_y) :
 		size_x(size_x), size_y(size_y), p_parent(nullptr), p_start(new T[size_x * size_y]{ 0 })
-	{;}
+	{
+		lock = true;
+	}
 
 	matrix(size_t size_x, size_t size_y, matrix<T>* p_parent, T* p_start) :
 		size_x(size_x), size_y(size_y), p_parent(p_parent), p_start(p_start)
-	{;}
+	{
+		lock = false;
+	}
 
 	matrix(const matrix<T>& other) :
 		size_x(other.size_x), size_y(other.size_y), p_parent(nullptr), p_start(new T[size_x * size_y]{ 0 })
 	{
+		lock = true;
+
 		for (size_t i = 0; i < size_x; ++i)
 		{
 			for (size_t j = 0; j < size_y; ++j)
@@ -48,12 +56,15 @@ struct matrix
 
 	~matrix()
 	{
-		if (p_start && p_parent == nullptr)
+		if (lock && p_start && p_parent == nullptr)
 		{
 			delete[] p_start;
-
-			std::cout << "deallocation matrix\n";
 		}
+	}
+
+	operator T* ()
+	{
+		return p_start;
 	}
 
 	T& at(size_t i, size_t j)
@@ -85,7 +96,6 @@ struct matrix
 	{
 		return at(i, j);
 	}
-
 
 	matrix<T> from(size_t i, size_t j, size_t sz_x, size_t sz_y)
 	{
@@ -184,19 +194,6 @@ struct matrix
 				L(i, j) = (_a - sum) / _u;
 			}
 		}
-
-		for (int j = 0; j < size; ++j)
-		{
-			for (int i = 0; i < j; ++i)
-			{
-				L(i, j) = 0.0;
-			}
-
-			for (int i = j + 1; i < size; ++i)
-			{
-				U(i, j) = 0.0;
-			}
-		}
 	}
 
 	void LU_decomposition(matrix<T>& L, matrix<T>& U, size_t size)
@@ -223,10 +220,10 @@ struct matrix
 			auto A22 = from(size + offset, size + offset, rm_size, rm_size); // block
 
 			auto L11 = L.from(offset, offset, size, size);
-			auto L21 = L.from(size, offset, size, rm_size); // col
+			auto L21 = L.from(offset + size, offset, size, rm_size); // col
 
 			auto U11 = U.from(offset, offset, size, size);
-			auto U12 = U.from(offset, size, rm_size, size); // row
+			auto U12 = U.from(offset, offset + size, rm_size, size); // row
 
 			A11.LU_decomposition(L11, U11);
 
@@ -265,44 +262,31 @@ struct matrix
 				}
 			}
 
-			A22 -= L21 * U12;
-
 			rm_size -= size;
 			offset += size;
 
-			std::cout << "\n\nprint: L\n";
-
-			L.print(std::cout);
-
-			std::cout << "\n\nprint: U\n";
-
-			U.print(std::cout);
-			
-
-			std::cout << "\n\nprint: A\n";
-
-			print(std::cout);
+			A22 -= L21 * U12;
 		}
 
 		auto A11 = from(offset, offset, size, size);
-
-		std::cout << "\n\nprint: A\n";
-
-		print(std::cout);
-
-
-		std::cout << "\n\nprint: L\n";
-
-		L.print(std::cout);
-
-		std::cout << "\n\nprint: U\n";
-
-		U.print(std::cout);
 
 		auto L11 = L.from(offset, offset, size, size);
 		auto U11 = U.from(offset, offset, size, size);
 
 		A11.LU_decomposition(L11, U11);
+
+		for (int j = 0; j < size; ++j)
+		{
+			for (int i = 0; i < j; ++i)
+			{
+				L(i, j) = 0.0;
+			}
+
+			for (int i = j + 1; i < size; ++i)
+			{
+				U(i, j) = 0.0;
+			}
+		}
 	}
 
 	void print(std::ostream& fd)
