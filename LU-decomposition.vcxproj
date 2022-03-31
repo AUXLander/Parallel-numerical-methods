@@ -144,10 +144,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="block_matrix.h" />
+    <ClInclude Include="block_matrix_2.h" />
     <ClInclude Include="math.h" />
     <ClInclude Include="matrix.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ext.cpp" />
     <ClCompile Include="source.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

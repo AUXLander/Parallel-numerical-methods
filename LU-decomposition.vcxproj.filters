@@ -24,9 +24,15 @@
     <ClInclude Include="block_matrix.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="block_matrix_2.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="ext.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
